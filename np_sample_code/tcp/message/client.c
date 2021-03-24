@@ -40,12 +40,18 @@ int main(int argc, char *argv[])
         exit(0);
     }
     
-
+	/*using bzero() set "serv_addr" bit of "serv_addr" to be 0-->initialize serv_addr which is a string*/
 	bzero((char *) &serv_addr, sizeof(serv_addr));
+
+	/*sin_family->represent protocol, AF_UNIX for Unix OS, AF_INET for via internet, and others*/
     serv_addr.sin_family = AF_INET;
+
+	/*sin_addr-> represent ip addr, here via a number*/
     bcopy((char *)server->h_addr, 
          (char *)&serv_addr.sin_addr.s_addr,
          server->h_length);
+
+	/*sin_port->represent port number,*/
     serv_addr.sin_port = htons(portno);
     if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) 
         error("ERROR connecting");
