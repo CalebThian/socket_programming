@@ -70,7 +70,9 @@ int main(int argc, char *argv[])
 	//7. Create an array to store file_name
 	char file_name[FILE_NAME_MAX_SIZE+1];
 	bzero(file_name,sizeof(file_name));
-	strncpy(file_name,buffer,strlen(buffer)>FILE_NAME_MAX_SIZE?FILE_NAME_MAX_SIZE+1:strlen(buffer));
+	//strncpy(file_name,buffer,strlen(buffer)>FILE_NAME_MAX_SIZE?FILE_NAME_MAX_SIZE+1:strlen(buffer));
+	read(newsockfd,file_name,sizeof(file_name));
+
 
 	FILE *fp = fopen(file_name,"r");
 	if(fp == NULL)

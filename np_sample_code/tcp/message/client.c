@@ -64,14 +64,14 @@ int main(int argc, char *argv[])
 	//3. Create a char array to store file name
 	char file_name[FILE_NAME_MAX_SIZE+1];
 	bzero(file_name,sizeof(file_name));
-	printf("Please Input File Name On Server.\n");
+	printf("Please Input File Name On Server.\t");
 	scanf("%s",file_name);
 
 	//4. Send the data in buffer which store the file name
 	bzero(buffer,sizeof(buffer));
 	strncpy(buffer,file_name,strlen(file_name)>BUFFER_SIZE?BUFFER_SIZE:strlen(file_name));
 	//maybe this send() can't work
-	send(sockfd,buffer,BUFFER_SIZE,0);
+	write(sockfd,buffer,BUFFER_SIZE);
 
 	//5. Open the file
 	FILE *fp = fopen(file_name,"w");
