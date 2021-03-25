@@ -23,7 +23,8 @@ int main(int argc, char *argv[])
     struct hostent *server;
 
     char buffer[BUFFER_SIZE];
-    if (argc < 3) {
+	char file_name_copy[FILE_NAME_MAX_SIZE];
+	if (argc < 3) {
        fprintf(stderr,"usage %s hostname port\n", argv[0]);
        exit(0);
     }
@@ -67,14 +68,19 @@ int main(int argc, char *argv[])
 	printf("Please Input File Name On Server.\t");
 	scanf("%s",file_name);
 
+	//3.b. Set new file name
+	bzero(file_name_copy,sizeof(file_name_copy));
+	strcat(file_name_copy,"copy");
+	strcat(file_name_copy,strchr(file_name,'.'));
+	printf("The new file name is %s\n",file_name_copy);
+
 	//4. Send the data in buffer which store the file name
 	bzero(buffer,sizeof(buffer));
 	strncpy(buffer,file_name,strlen(file_name)>BUFFER_SIZE?BUFFER_SIZE:strlen(file_name));
-	//maybe this send() can't work
 	write(sockfd,buffer,BUFFER_SIZE);
 
 	//5. Open the file
-	FILE *fp = fopen(file_name,"w");
+	FILE *fp = fopen(file_name_copy,"w");
 	if(fp==NULL){
 		printf("File:\t%sCannot Open To Write!\n",file_name);
 		exit(1);
@@ -83,15 +89,16 @@ int main(int argc, char *argv[])
 	//6. Receive the data from server and store in buffer
 	bzero(buffer,sizeof(BUFFER_SIZE));
 	int length = 0;
-	while(length = recv(sockfd,buffer,BUFFER_SIZE,0)){
+	while(length = read(sockfd,buffer,BUFFER_SIZE)){
 		if(length<0){
 			printf("Receive Data From Server %s Failed!\n",argv[1]);
 			break;
+			//continue;
 		}
 
 		int write_length = fwrite(buffer,sizeof(char),length,fp);
 		if(write_length<length){
-			printf("File:\t%sWrite Failed!\n",file_name);
+			printf("File:\t%sWrite Failed!\n",file_name_copy);
 			break;
 		}
 		bzero(buffer,BUFFER_SIZE);

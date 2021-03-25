@@ -80,11 +80,15 @@ int main(int argc, char *argv[])
 	else{
 		bzero(buffer,BUFFER_SIZE);
 		int file_block_length = 0;
+		//Debug use:
+		//printf("%d\n",fread(buffer,sizeof(char),BUFFER_SIZE,fp));
+		///printf("%s\n",buffer);
+		//Above: Debug use
 		while((file_block_length = fread(buffer,sizeof(char),BUFFER_SIZE,fp)) > 0){
 			//Start to read the file
 			printf("file_block_length == %d\n",file_block_length);
 			//Send the string in the buffer to the socket, which is the client
-			if(send(newsockfd,buffer,file_block_length,0) < 0){
+			if(write(newsockfd,buffer,file_block_length) < 0){
 				printf("Send File:\t%s Failed!\n",file_name);
 				break;
 			}
