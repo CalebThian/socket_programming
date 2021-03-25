@@ -67,6 +67,37 @@ int main(int argc, char *argv[])
           error("ERROR on accept");
 
 	
+	//7. Create an array to store file_name
+	char file_name[FILE_NAME_MAX_SIZE+1];
+	bzero(file_name,sizeof(file_name));
+	strncpy(file_name,buffer,strlen(buffer)>FILE_NAME_MAX_SIZE?FILE_NAME_MAX_SIZE+1:strlen(buffer));
+
+	FILE *fp = fopen(file_name,"r");
+	if(fp == NULL)
+		printf("FILE:\t%s Not Found!\n",file_name);
+	else{
+		bzero(buffer,BUFFER_SIZE);
+		int file_block_length = 0;
+		while((file_block_length = fread(buffer,sizeof(char),BUFFER_SIZE,fp)) > 0){
+			//Start to read the file
+			printf("file_block_length == %d\n",file_block_length);
+			//Send the string in the buffer to the socket, which is the client
+			if(send(newsockfd,buffer,file_block_length,0) < 0){
+				printf("Send File:\t%s Failed!\n",file_name);
+				break;
+			}
+
+			bzero(buffer,sizeof(buffer));
+		}
+
+		fclose(fp);
+		printf("File:\t%s Transfer Finished!\n",file_name);
+
+		close(newsockfd);
+	}
+
+
+
 
 	 /*
 	 //7. read(): Read from the socket
