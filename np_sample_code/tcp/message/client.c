@@ -8,6 +8,7 @@
 #include <netdb.h> 
 
 #define FILE_NAME_MAX_SIZE 512
+#define BUFFER_SIZE 1024
 
 void error(const char *msg)
 {
@@ -21,7 +22,7 @@ int main(int argc, char *argv[])
     struct sockaddr_in serv_addr;
     struct hostent *server;
 
-    char buffer[256];
+    char buffer[BUFFER_SIZE];
     if (argc < 3) {
        fprintf(stderr,"usage %s hostname port\n", argv[0]);
        exit(0);
@@ -66,8 +67,38 @@ int main(int argc, char *argv[])
 	printf("Please Input File Name On Server.\n");
 	scanf("%s",file_name);
 
-	//4. 
+	//4. Send the data in buffer which store the file name
+	bzero(buffer,sizeof(buffer));
+	strncpy(buffer,file_name,strlen(file_name)>BUFFER_SIZE?BUFFER_SIZE:strlen(file_name));
+	//maybe this send() can't work
+	send(sockfd,buffer,BUFFER_SIZE,0);
+
+	//5. Open the file
+	FILE *fp = fopen(file_name,"w");
+	if(fp==NULL){
+		printf("File:\t%sCannot Open To Write!\n",file_name);
+		exit(1);
+	}
 	
+	//6. Receive the data from server and store in buffer
+	bzero(buffer,sizeof(BUFFER_SIZE));
+	int length = 0;
+	while(length = recv(sockfd,buffer,BUFFER_SIZE,0)){
+		if(length<0){
+			printf("Receive Data From Server %s Failed!\n",argv[1]);
+			break;
+		}
+
+		int write_length = fwrite(buffer,sizeof(char),length,fp);
+		if(write_length<length){
+			printf("File:\t%sWrite Failed!\n",file_name);
+			break;
+		}
+		bzero(buffer,BUFFER_SIZE);
+	}
+	
+	printf("Receive File:\t%s From Server[%s] Finished!\n",file_name,argv[1]);
+	fclose(fp);
 
 	/*
 	//3. Connection establish, write()
