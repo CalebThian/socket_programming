@@ -20,19 +20,18 @@ int main(int argc, char *argv[])
 {
     if(strcmp(argv[1],"tcp")==0){
 		if(strcmp(argv[2],"recv")==0){
-	    	int sockfd, portno, n;
-	    	struct sockaddr_in serv_addr;
-	    	struct hostent *server;
-
-	    	char buffer[BUFFER_SIZE];
+			int sockfd, portno, n;
+			struct sockaddr_in serv_addr;
+			struct hostent *server;
+			char buffer[BUFFER_SIZE];
 			char file_name_copy[FILE_NAME_MAX_SIZE];
 			if(argc < 5) {
 	       		fprintf(stderr,"usage %s tcp recv ip port\n", argv[0]);
 	       		exit(0);
-	    	}
+			}
 	    
 	    	//Set portno from argument
-	    	portno = atoi(argv[4]);
+			portno = atoi(argv[4]);
 
             //1. Initialize sockfd by socket()
 	    	sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -53,9 +52,7 @@ int main(int argc, char *argv[])
 	    	serv_addr.sin_family = AF_INET;
 
 			//c.ii. sin_addr-> represent ip addr, here via a number
-	    	bcopy((char *)server->h_addr, 
-		 	(char *)&serv_addr.sin_addr.s_addr,
-		 	server->h_length);
+	    	bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr,server->h_length);
 
 			//c.iii.sin_port->represent port number,
 	    	serv_addr.sin_port = htons(portno);
@@ -87,8 +84,8 @@ int main(int argc, char *argv[])
 			int length = 0;
 			while(length = read(sockfd,buffer,BUFFER_SIZE)){
 				if(length<0){
-					printf("Receive Data From Server %s Failed!\n",argv[1]);
-					break;
+					//printf("Receive Data From Server %s Failed!\n",argv[1]);
+					continue;
 				}
 
 				int write_length = fwrite(buffer,sizeof(char),length,fp);
@@ -99,27 +96,10 @@ int main(int argc, char *argv[])
 				bzero(buffer,BUFFER_SIZE);
 			}
 	
-			printf("Receive File:\t%s From Server[%s] Finished!\n",file_name,"localhost");
+			printf("Receive File:\t%s From Server[%s] Finished!\n",file_name,argv[4]);
 			fclose(fp);
-
-		/*
-		//3. Connection establish, write()
-	    printf("Please enter the message: ");
-	    bzero(buffer,256);
-	    fgets(buffer,255,stdin);
-	    n = write(sockfd,buffer,strlen(buffer));
-	    if (n < 0) 
-		 error("ERROR writing to socket");
 	    
-		//4. Data sent,and some data replied, read() 
-		bzero(buffer,256);
-		n = read(sockfd,buffer,255);
-	    if (n < 0) 
-		 error("ERROR reading from socket");
-	    printf("%s\n",buffer);
-	    */
-
-		//5.Close()
+			//6.Close()
 			close(sockfd);
 	    	return 0;
 		}else if(strcmp(argv[2],"send")==0){
@@ -182,22 +162,22 @@ int main(int argc, char *argv[])
 			else{
 				bzero(buffer,BUFFER_SIZE);
 				int file_block_length = 0;
-			while((file_block_length = fread(buffer,sizeof(char),BUFFER_SIZE,fp)) > 0){
-				//Start to read the file
-				printf("file_block_length == %d\n",file_block_length);
-				//Send the string in the buffer to the socket, which is the client
-				if(write(newsockfd,buffer,file_block_length) < 0){
-					printf("Send File:\t%s Failed!\n",file_name);
-					break;
+				while((file_block_length = fread(buffer,sizeof(char),BUFFER_SIZE,fp)) > 0){
+					//Start to read the file
+					printf("file_block_length == %d\n",file_block_length);
+					//Send the string in the buffer to the socket, which is the client
+					if(write(newsockfd,buffer,file_block_length) < 0){
+						printf("Send File:\t%s Failed!\n",file_name);
+						break;
+					}
+					bzero(buffer,sizeof(buffer));
 				}
-				bzero(buffer,sizeof(buffer));
+
+				fclose(fp);
+				printf("File:\t%s Transfer Finished!\n",file_name);
+
+				close(newsockfd);
 			}
-
-			fclose(fp);
-			printf("File:\t%s Transfer Finished!\n",file_name);
-
-			close(newsockfd);
-		}
 	 /*
 	 //7. read(): Read from the socket
      bzero(buffer,256);
