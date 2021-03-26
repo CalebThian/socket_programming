@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
 				error("ERROR opening socket");
 	    
 			//a. Set server(in this assignment we use 'localhost')
-			server = gethostbyname("localhost");
+			server = gethostbyname(argv[3]);
 	    	if (server == NULL) {
 				fprintf(stderr,"ERROR, no such host\n");
 				exit(0);
@@ -61,10 +61,15 @@ int main(int argc, char *argv[])
 			if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) 
 				error("ERROR connecting");
 
-			//3. Create a char array to store file name
+			//3.a. Create a char array to store file name
 			char file_name[FILE_NAME_MAX_SIZE+1];
 			bzero(file_name,sizeof(file_name));
 			read(sockfd,file_name,BUFFER_SIZE);
+			
+			//3.b. Inform server that file name receive
+			bzero(buffer,sizeof(BUFFER_SIZE));
+			strcpy(buffer,"File name received!");
+			write(sockfd,buffer,BUFFER_SIZE);
 
 			//3.b. Set new file name
 			bzero(file_name_copy,sizeof(file_name_copy));
@@ -87,7 +92,6 @@ int main(int argc, char *argv[])
 					//printf("Receive Data From Server %s Failed!\n",argv[1]);
 					continue;
 				}
-
 				int write_length = fwrite(buffer,sizeof(char),length,fp);
 				if(write_length<length){
 					printf("File:\t%sWrite Failed!\n",file_name_copy);
@@ -154,7 +158,10 @@ int main(int argc, char *argv[])
 			bzero(file_name,sizeof(file_name));
 			strncpy(file_name,argv[5],strlen(argv[5])>FILE_NAME_MAX_SIZE?FILE_NAME_MAX_SIZE+1:strlen(argv[5]));
 			write(newsockfd,file_name,sizeof(file_name));
-
+			
+			bzero(buffer,sizeof(buffer));
+			read(newsockfd,buffer,sizeof(buffer));
+			printf("Receive message:%s\n",buffer);
 
 			FILE *fp = fopen(file_name,"r");
 			if(fp == NULL)
