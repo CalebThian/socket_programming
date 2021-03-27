@@ -9,7 +9,7 @@ int main(){
 	for(int i = 0;i<26;++i){
 		alpha[i]='a'+i;
 	}
-	while(mb<300*1024){
+	while(mb<600*1024){
 		len = 0;
 		while(len<1024){
 			fprintf(fp,alpha);

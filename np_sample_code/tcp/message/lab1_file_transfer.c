@@ -6,7 +6,10 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h> 
+#include <time.h>
+#include <unistd.h>
 
+#define T_BUFFER_SIZE 256
 #define FILE_NAME_MAX_SIZE 512
 #define BUFFER_SIZE 1024
 
@@ -15,6 +18,50 @@ void error(const char *msg)
     perror(msg);
     exit(0);
 }
+
+void time_now(){
+	char t_buf[T_BUFFER_SIZE]={0};
+	time_t rawtime = time(NULL);
+	struct tm *ptm = localtime(&rawtime);
+	strftime(t_buf,T_BUFFER_SIZE,"%Y/%m/%d %X",ptm);
+	puts(t_buf);
+}
+
+void time_now_by_myself(int* y,int* m,int* d,int* hr,int* min,int* sec){
+	time_t seconds = time(NULL);
+	time_t minutes = seconds/60;
+	seconds %= 60;
+	time_t hours = minutes/60;
+	minutes %= 60;
+	time_t days = hours/24;
+	hours %= 24;
+	int start_year;
+	for(start_year=1970;days>365;start_year++){
+		if((start_year%4==0 && start_year%100!=0)||(start_year%100==0 && start_year%400==0))
+			days-=366;
+		else
+			days-=365;
+	}
+	
+	days++;
+	int current_month=1;
+	int month[12]={31,28,31,30,31,30,31,31,30,31,30,31};
+	if((start_year%4==0 && start_year%100!=0)||(start_year%100==0 && start_year%400==0))
+		month[2]++;
+
+	for(current_month=1;days>month[current_month-1];++current_month){
+		days-=month[current_month-1];
+	}
+
+	printf("%ld/%ld/%ld %02d:%02d:%02d",start_year,current_month,days,hours,minutes,seconds);
+	*y = start_year;
+	*m = current_month;
+	*d = days;
+	*hr = hours;
+	*min = minutes;
+	*sec = seconds;
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -112,7 +159,7 @@ int main(int argc, char *argv[])
      		socklen_t clilen;
      		char buffer[BUFFER_SIZE];
      		struct sockaddr_in serv_addr, cli_addr;
-     		int n;
+     		int n,flen,ftotal;
 
 			//1. Check port whether provided or not
      		if (argc < 6) {
@@ -167,11 +214,32 @@ int main(int argc, char *argv[])
 			if(fp == NULL)
 				printf("FILE:\t%s Not Found!\n",file_name);
 			else{
+				//Calculate the filesize
+				fseek(fp,0L,SEEK_END);
+				flen = ftell(fp);
+				fseek(fp,0L,SEEK_SET);
+				
 				bzero(buffer,BUFFER_SIZE);
 				int file_block_length = 0;
+				int y,m,d,hr,min,sec;
+				double percent= .0;
+				double gap = 0.25;
+
+				//Calculate time_now
+				printf("0%% ");
+				time_now();
+				clock_t start = clock();
 				while((file_block_length = fread(buffer,sizeof(char),BUFFER_SIZE,fp)) > 0){
 					//Start to read the file
-					printf("file_block_length == %d\n",file_block_length);
+					ftotal += file_block_length;
+					if((double)ftotal/(double)flen>gap){
+						printf("%d%% ",(int)(gap*100));
+						//printf("%ld/%ld/%ld %02d:%02d:%02d",y,m,d,hr,min,(int)((double)sec+(double)(clock()-start)/CLOCKS_PER_SEC));
+						//time_now(&y,&m,&d,&hr,&min,&sec);
+						time_now();
+						gap+=0.25;
+					}
+					//printf("file_block_length == %d\n",file_block_length);
 					//Send the string in the buffer to the socket, which is the client
 					if(write(newsockfd,buffer,file_block_length) < 0){
 						printf("Send File:\t%s Failed!\n",file_name);
@@ -179,7 +247,9 @@ int main(int argc, char *argv[])
 					}
 					bzero(buffer,sizeof(buffer));
 				}
-
+				clock_t end = clock();
+				printf("\nTotal trans time: %lfms\n",(double)(end-start)*1000/CLOCKS_PER_SEC);
+				printf("file size : %.1fMB\n",(double)flen/1000/1000);
 				fclose(fp);
 				printf("File:\t%s Transfer Finished!\n",file_name);
 

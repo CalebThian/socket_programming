@@ -39,6 +39,10 @@ void time_now(){
 }
 
 int main(){
-	time_now();
+	//time_now();
+	char buf[256]={0};
+	time_t rawtime = time(NULL);
+	strftime(buf,256,"%D\n",localtime(&rawtime));
+	puts(buf);
 	return 0;
 }
