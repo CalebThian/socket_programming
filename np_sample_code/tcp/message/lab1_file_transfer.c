@@ -312,6 +312,12 @@ int main(int argc, char *argv[])
 							}
 							bzero(buffer,sizeof(buffer));
 						}
+						if(gap==1.00){
+							printf("%d%% ",(int)(gap*100));
+							time_now();
+							gap+=0.25;
+						}
+
 						clock_t end = clock();
 						printf("\nTotal trans time: %lfms\n",(double)(end-start)*1000/CLOCKS_PER_SEC);
 						printf("file size : %.1fMB\n",(double)flen/1000/1000);
@@ -358,7 +364,7 @@ int main(int argc, char *argv[])
 			char file_name[FILE_NAME_MAX_SIZE+1]={0};
 			printf("Please enter any string if ready to receive file...\n");
 				
-			//If get any from terminal,especially "Ready"
+			//If get any string from terminal
 			while(n=fgets(sendbuf,sizeof(sendbuf),stdin) != NULL){
 				sendto(sock,sendbuf,strlen(sendbuf),0,(struct sockaddr*)&servaddr,sizeof(servaddr));
 				
