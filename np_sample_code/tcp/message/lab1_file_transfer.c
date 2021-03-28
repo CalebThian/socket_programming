@@ -220,11 +220,12 @@ int main(int argc, char *argv[])
      		return 0;
 		}
 	}else if(strcmp(argv[1],"udp")==0){
-		//1. Initialize socket
+		//1. Initialize socket(common)
 		int sock;
 		if((sock = socket(PF_INET,SOCK_DGRAM,0))<0)
 			error("socket error");
 
+		//Send or recv
 		if(strcmp(argv[2],"send")==0){
 			//2. Set up servaddr
 			struct sockaddr_in servaddr;
@@ -262,15 +263,21 @@ int main(int argc, char *argv[])
 					if(errno == EINTR)
 						continue;
 					error("recvfrom error");
-				}else if(strcmp(buffer,"Ready")==0){
+				}else{
 					char inform_text[] = "Start transfering ";
 					bzero(buffer,sizeof(BUFFER_SIZE));
 					strncpy(buffer,inform_text,strlen(inform_text));
 					strcat(buffer,file_name);
+
 					sendto(sock,buffer,sizeof(buffer),0,
 							(struct sockaddr*)&peeraddr,peerlen);
 					fputs(buffer,stdout);
-				
+
+					//Receive the new file name
+					bzero(buffer,sizeof(buffer));
+					recvfrom(sock,buffer,sizeof(buffer),0,(struct sockaddr *)&peeraddr, &peerlen);
+					fputs(buffer,stdout);
+					bzero(buffer,sizeof(buffer));
 
 					FILE *fp = fopen(file_name,"r");
 					if(fp == NULL)
@@ -287,7 +294,7 @@ int main(int argc, char *argv[])
 						double gap = 0.25;
 
 						//Calculate time_now
-						printf("0%% ");
+						printf("\n0%% ");
 						time_now();
 						clock_t start = clock();
 						while((file_block_length = fread(buffer,sizeof(char),BUFFER_SIZE,fp)) > 0){
@@ -312,12 +319,88 @@ int main(int argc, char *argv[])
 						printf("File:\t%s Transfer Finished!\n",file_name);
 
 						close(sock);
+						break;
 					}
 				}
 			}
 		}else if(strcmp(argv[2],"recv")==0){
-		}
+			//2. Initialize servaddr and some other variables
+			struct hostent *server;
+			server = gethostbyname(argv[3]);
+	    	if (server == NULL) {
+				fprintf(stderr,"ERROR, no such host\n");
+				exit(0);
+	   		}
 
+			struct sockaddr_in servaddr;
+			memset(&servaddr,0,sizeof(servaddr));
+			servaddr.sin_family = AF_INET;
+			servaddr.sin_port = htons(atoi(argv[4]));
+	    	bcopy((char *)server->h_addr, (char *)&servaddr.sin_addr.s_addr,server->h_length);
+		
+			int ret,n;
+			char sendbuf[BUFFER_SIZE] = {0};
+			char recvbuf[BUFFER_SIZE] = {0};
+			char file_name[FILE_NAME_MAX_SIZE+1]={0};
+			printf("Please enter any string if ready to receive file...\n");
+				
+			//If get any from terminal,especially "Ready"
+			while(n=fgets(sendbuf,sizeof(sendbuf),stdin) != NULL){
+				sendto(sock,sendbuf,strlen(sendbuf),0,(struct sockaddr*)&servaddr,sizeof(servaddr));
+				
+				//Receive file name from server
+				ret = recvfrom(sock,recvbuf,sizeof(recvbuf),0,NULL,NULL);
+				if(ret == -1){
+					if(errno == EINTR)
+						continue;
+					error("recvfrom");
+				}
+				
+				printf("%s\n"recvbuf);
+
+				//Send the new file name
+				strcpy(file_name,"copy");
+				strcat(file_name,strchr(recvbuf,'.'));
+
+				memset(sendbuf,0,sizeof(sendbuf));
+				strcpy(sendbuf,"Receive the file name,the new file name will be ");
+				strcat(sendbuf,file_name);
+
+				printf("%s\n",sendbuf);
+				sendto(sock,sendbuf,strlen(sendbuf),0,
+							(struct sockaddr*)&servaddr,sizeof(servaddr));
+				bzero(sendbuf,sizeof(sendbuf));
+				bzero(recvbuf,sizeof(recvbuf));
+
+
+				//Open the file to write
+				FILE *fp = fopen(file_name,"w");
+				if(fp==NULL){
+					printf("File:\t%sCannot Open To Write!\n",file_name);
+					exit(1);
+				}
+		
+				//5. Receive the data from server and store in buffer
+				int length = 0;
+				while(length = recvfrom(sock,recvbuf,BUFFER_SIZE,0,NULL,NULL)){
+					if(length<0){
+						break;
+					}
+					int write_length = fwrite(recvbuf,sizeof(char),length,fp);
+					if(write_length<length){
+						printf("File:\t%sWrite Failed!\n",file_name);
+						break;
+					}
+					bzero(recvbuf,BUFFER_SIZE);
+				}
+				printf("Successfully receive the file!\n");	
+				fclose(fp);
+			
+				//6.Close()
+				close(sock);
+				break;
+			}
+		}
 		return 0;
 	}
 }
