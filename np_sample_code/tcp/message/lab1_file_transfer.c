@@ -325,7 +325,12 @@ int main(int argc, char *argv[])
 						//Receive success transfer file size and calculate file loss rate
 						recvfrom(sock,buffer,sizeof(buffer),0,(struct sockaddr*)&peeraddr,&peerlen);
 						int fsuc = atoi(buffer);
-						printf("File Loss Rate = %.2lf%%\n",(double)fsuc/(double)flen*100);
+						bzero(buffer,sizeof(buffer));
+						sprintf(buffer,"File Loss Rate = %.2lf%%\n",(double)fsuc/(double)flen*100);
+						puts(buffer);
+						
+						//Send the file loss rate
+						sendto(sock,buffer,sizeof(buffer),0,(struct sockaddr *)&peeraddr,peerlen);
 
 						close(sock);
 						break;
@@ -414,7 +419,11 @@ int main(int argc, char *argv[])
 						(struct sockaddr*)&servaddr,sizeof(servaddr));
 
 				fclose(fp);
-			
+				
+				//Receive the file loss rate from send
+				bzero(recvbuf,sizeof(recvbuf));
+				recvfrom(sock,recvbuf,sizeof(recvbuf),0,NULL,NULL);
+				printf("%s\n",recvbuf);
 				//6.Close()
 				close(sock);
 				break;
