@@ -29,9 +29,11 @@ void echo_ser(int sock)
 
     while (1)
     {
-
+		//Initialize peerlen,recvbuf 
         peerlen = sizeof(peeraddr);
         memset(recvbuf, 0, sizeof(recvbuf));
+
+		//Receive message if there is any
         n = recvfrom(sock, recvbuf, sizeof(recvbuf), 0,
                      (struct sockaddr *)&peeraddr, &peerlen);
         if (n == -1)
@@ -44,7 +46,7 @@ void echo_ser(int sock)
         }
         else if(n > 0)
         {
-
+			//If receive, print one at server and send one to client
             fputs(recvbuf, stdout);
             sendto(sock, recvbuf, n, 0,
                    (struct sockaddr *)&peeraddr, peerlen);
@@ -55,19 +57,24 @@ void echo_ser(int sock)
 
 int main(void)
 {
-    int sock;
+    //1. Initialize socket
+	int sock;
     if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) < 0)
         ERR_EXIT("socket error");
 
+	//2. Set up servaddr
     struct sockaddr_in servaddr;
     memset(&servaddr, 0, sizeof(servaddr));
-    servaddr.sin_family = AF_INET;
+    //2.a-c. set sin_family,sin_port, and sin_addr
+	servaddr.sin_family = AF_INET;
     servaddr.sin_port = htons(5188);
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
 
+	//3. bind() with the servaddr
     if (bind(sock, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
         ERR_EXIT("bind error");
 
+	//4. Call echo_ser(sock)
     echo_ser(sock);
 
     return 0;
