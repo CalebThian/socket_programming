@@ -27,42 +27,6 @@ void time_now(){
 	puts(t_buf);
 }
 
-void time_now_by_myself(int* y,int* m,int* d,int* hr,int* min,int* sec){
-	time_t seconds = time(NULL);
-	time_t minutes = seconds/60;
-	seconds %= 60;
-	time_t hours = minutes/60;
-	minutes %= 60;
-	time_t days = hours/24;
-	hours %= 24;
-	int start_year;
-	for(start_year=1970;days>365;start_year++){
-		if((start_year%4==0 && start_year%100!=0)||(start_year%100==0 && start_year%400==0))
-			days-=366;
-		else
-			days-=365;
-	}
-	
-	days++;
-	int current_month=1;
-	int month[12]={31,28,31,30,31,30,31,31,30,31,30,31};
-	if((start_year%4==0 && start_year%100!=0)||(start_year%100==0 && start_year%400==0))
-		month[2]++;
-
-	for(current_month=1;days>month[current_month-1];++current_month){
-		days-=month[current_month-1];
-	}
-
-	printf("%ld/%ld/%ld %02d:%02d:%02d",start_year,current_month,days,hours,minutes,seconds);
-	*y = start_year;
-	*m = current_month;
-	*d = days;
-	*hr = hours;
-	*min = minutes;
-	*sec = seconds;
-}
-
-
 int main(int argc, char *argv[])
 {
     if(strcmp(argv[1],"tcp")==0){
@@ -221,7 +185,6 @@ int main(int argc, char *argv[])
 				
 				bzero(buffer,BUFFER_SIZE);
 				int file_block_length = 0;
-				int y,m,d,hr,min,sec;
 				double percent= .0;
 				double gap = 0.25;
 
@@ -234,12 +197,9 @@ int main(int argc, char *argv[])
 					ftotal += file_block_length;
 					if((double)ftotal/(double)flen>gap){
 						printf("%d%% ",(int)(gap*100));
-						//printf("%ld/%ld/%ld %02d:%02d:%02d",y,m,d,hr,min,(int)((double)sec+(double)(clock()-start)/CLOCKS_PER_SEC));
-						//time_now(&y,&m,&d,&hr,&min,&sec);
 						time_now();
 						gap+=0.25;
 					}
-					//printf("file_block_length == %d\n",file_block_length);
 					//Send the string in the buffer to the socket, which is the client
 					if(write(newsockfd,buffer,file_block_length) < 0){
 						printf("Send File:\t%s Failed!\n",file_name);
@@ -255,16 +215,6 @@ int main(int argc, char *argv[])
 
 				close(newsockfd);
 			}
-	 /*
-	 //7. read(): Read from the socket
-     bzero(buffer,256);
-     n = read(newsockfd,buffer,255);
-     if (n < 0) error("ERROR reading from socket");
-     printf("Here is the message: %s\n",buffer);
-     n = write(newsockfd,"I got your message",18);
-     if (n < 0) error("ERROR writing to socket");
-     close(newsockfd);
-     */
 	 		close(sockfd);
      		return 0;
 		}
