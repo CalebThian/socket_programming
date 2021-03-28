@@ -8,6 +8,7 @@
 #include <netdb.h> 
 #include <time.h>
 #include <unistd.h>
+#include <errno.h>
 
 #define T_BUFFER_SIZE 256
 #define FILE_NAME_MAX_SIZE 512
@@ -218,5 +219,105 @@ int main(int argc, char *argv[])
 	 		close(sockfd);
      		return 0;
 		}
+	}else if(strcmp(argv[1],"udp")==0){
+		//1. Initialize socket
+		int sock;
+		if((sock = socket(PF_INET,SOCK_DGRAM,0))<0)
+			error("socket error");
+
+		if(strcmp(argv[2],"send")==0){
+			//2. Set up servaddr
+			struct sockaddr_in servaddr;
+			memset(&servaddr,0,sizeof(servaddr));
+			//2.A-C. Set sin_family,sin_port and sin_addr
+			servaddr.sin_family = AF_INET;
+			servaddr.sin_port = htons(atoi(argv[4]));
+			servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+			//3.bind() with the servaddr
+			if(bind(sock,(struct sockaddr*)&servaddr,sizeof(servaddr)))
+					error("bind error");
+			
+			//4.Declare sockaddr_in and other varibles using for tranfering file
+			char buffer[BUFFER_SIZE];
+			char file_name[FILE_NAME_MAX_SIZE];
+			struct sockaddr_in peeraddr;
+			socklen_t peerlen;
+			int n,flen,ftotal;
+					
+			//5. Set the name of file
+			bzero(file_name,sizeof(file_name));
+			strncpy(file_name,argv[5],strlen(argv[5])>FILE_NAME_MAX_SIZE?FILE_NAME_MAX_SIZE+1:strlen(argv[5]));
+				
+			//6. Transfer the file if any client is ready build
+			while(1){
+				// Initialize peerlen,recvbuf
+				peerlen = sizeof(peeraddr);
+				memset(buffer,0,sizeof(buffer));
+
+				//Receive message if there is any
+				n = recvfrom(sock,buffer,sizeof(buffer),0,
+						(struct sockaddr *)&peeraddr, &peerlen);
+				if(n==-1){
+					if(errno == EINTR)
+						continue;
+					error("recvfrom error");
+				}else if(strcmp(buffer,"Ready")==0){
+					char inform_text[] = "Start transfering ";
+					bzero(buffer,sizeof(BUFFER_SIZE));
+					strncpy(buffer,inform_text,strlen(inform_text));
+					strcat(buffer,file_name);
+					sendto(sock,buffer,sizeof(buffer),0,
+							(struct sockaddr*)&peeraddr,peerlen);
+					fputs(buffer,stdout);
+				
+
+					FILE *fp = fopen(file_name,"r");
+					if(fp == NULL)
+						printf("FILE:\t%s Not Found!\n",file_name);
+					else{
+						//Calculate the filesize
+						fseek(fp,0L,SEEK_END);
+						flen = ftell(fp);
+						fseek(fp,0L,SEEK_SET);
+					
+						bzero(buffer,BUFFER_SIZE);
+						int file_block_length = 0;
+						double percent= .0;
+						double gap = 0.25;
+
+						//Calculate time_now
+						printf("0%% ");
+						time_now();
+						clock_t start = clock();
+						while((file_block_length = fread(buffer,sizeof(char),BUFFER_SIZE,fp)) > 0){
+						//Start to read the file
+							ftotal += file_block_length;
+							if((double)ftotal/(double)flen>gap){
+								printf("%d%% ",(int)(gap*100));
+								time_now();
+								gap+=0.25;
+							}
+						//Send the string in the buffer to the socket, which is the client
+							if(sendto(sock,buffer,file_block_length,0,(struct sockaddr *)&peeraddr,peerlen) < 0){
+								printf("Send File:\t%s Failed!\n",file_name);
+								break;
+							}
+							bzero(buffer,sizeof(buffer));
+						}
+						clock_t end = clock();
+						printf("\nTotal trans time: %lfms\n",(double)(end-start)*1000/CLOCKS_PER_SEC);
+						printf("file size : %.1fMB\n",(double)flen/1000/1000);
+						fclose(fp);
+						printf("File:\t%s Transfer Finished!\n",file_name);
+
+						close(sock);
+					}
+				}
+			}
+		}else if(strcmp(argv[2],"recv")==0){
+		}
+
+		return 0;
 	}
 }
