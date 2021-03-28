@@ -264,21 +264,6 @@ int main(int argc, char *argv[])
 						continue;
 					error("recvfrom error");
 				}else{
-					char inform_text[] = "Start transfering ";
-					bzero(buffer,sizeof(BUFFER_SIZE));
-					strncpy(buffer,inform_text,strlen(inform_text));
-					strcat(buffer,file_name);
-
-					sendto(sock,buffer,sizeof(buffer),0,
-							(struct sockaddr*)&peeraddr,peerlen);
-					fputs(buffer,stdout);
-
-					//Receive the new file name
-					bzero(buffer,sizeof(buffer));
-					recvfrom(sock,buffer,sizeof(buffer),0,(struct sockaddr *)&peeraddr, &peerlen);
-					fputs(buffer,stdout);
-					bzero(buffer,sizeof(buffer));
-
 					FILE *fp = fopen(file_name,"r");
 					if(fp == NULL)
 						printf("FILE:\t%s Not Found!\n",file_name);
@@ -288,6 +273,21 @@ int main(int argc, char *argv[])
 						flen = ftell(fp);
 						fseek(fp,0L,SEEK_SET);
 					
+						char inform_text[] = "Start transfering ";
+						bzero(buffer,sizeof(BUFFER_SIZE));
+						strncpy(buffer,inform_text,strlen(inform_text));
+						strcat(buffer,file_name);
+						sendto(sock,buffer,sizeof(buffer),0,
+								(struct sockaddr*)&peeraddr,peerlen);
+						printf("%s\n",buffer);
+						
+						//Receive the new file name
+						bzero(buffer,sizeof(buffer));
+						recvfrom(sock,buffer,sizeof(buffer),0,
+								(struct sockaddr *)&peeraddr, &peerlen);
+							fputs(buffer,stdout);
+						
+						bzero(buffer,sizeof(buffer));
 						bzero(buffer,BUFFER_SIZE);
 						int file_block_length = 0;
 						double percent= .0;
@@ -317,6 +317,15 @@ int main(int argc, char *argv[])
 						printf("file size : %.1fMB\n",(double)flen/1000/1000);
 						fclose(fp);
 						printf("File:\t%s Transfer Finished!\n",file_name);
+						
+						//End transfer file
+						bzero(buffer,sizeof(buffer));
+						sendto(sock,buffer,0,0,(struct sockaddr *)&peeraddr,peerlen);
+
+						//Receive success transfer file size and calculate file loss rate
+						recvfrom(sock,buffer,sizeof(buffer),0,(struct sockaddr*)&peeraddr,&peerlen);
+						int fsuc = atoi(buffer);
+						printf("File Loss Rate = %.2lf%%\n",(double)fsuc/(double)flen*100);
 
 						close(sock);
 						break;
@@ -356,7 +365,7 @@ int main(int argc, char *argv[])
 					error("recvfrom");
 				}
 				
-				printf("%s\n"recvbuf);
+				printf("%s\n",recvbuf);
 
 				//Send the new file name
 				strcpy(file_name,"copy");
@@ -383,7 +392,7 @@ int main(int argc, char *argv[])
 				//5. Receive the data from server and store in buffer
 				int length = 0;
 				while(length = recvfrom(sock,recvbuf,BUFFER_SIZE,0,NULL,NULL)){
-					if(length<0){
+					if(length<=0){
 						break;
 					}
 					int write_length = fwrite(recvbuf,sizeof(char),length,fp);
@@ -394,6 +403,16 @@ int main(int argc, char *argv[])
 					bzero(recvbuf,BUFFER_SIZE);
 				}
 				printf("Successfully receive the file!\n");	
+
+				//Send final file size
+				fseek(fp,0L,SEEK_SET);
+				fseek(fp,0L,SEEK_END);
+				int flen = ftell(fp);
+				bzero(sendbuf,BUFFER_SIZE);
+				sprintf(sendbuf,"%d",flen);
+				sendto(sock,sendbuf,BUFFER_SIZE,0,
+						(struct sockaddr*)&servaddr,sizeof(servaddr));
+
 				fclose(fp);
 			
 				//6.Close()
